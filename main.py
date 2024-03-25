@@ -4,6 +4,7 @@ from typing import Annotated
 import models
 from database import engine, SessionLocal
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import joinedload
 
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
@@ -24,7 +25,10 @@ def get_db():
         db.close()
 
 db_dependency = Annotated[Session, Depends(get_db)]
-
+@app.get("/questions")
+async def read_questions(db: db_dependency):
+    result = db.query(models.Questions).options(joinedload(models.Questions.choices)).all()
+    return result
 
 @app.get("/questions/{question_id}")
 async def read_question(question_id: int, db: db_dependency):
