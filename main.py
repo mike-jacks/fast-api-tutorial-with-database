@@ -55,3 +55,28 @@ async def create_questions(question: QuestionBase, db: db_dependency):
         db_choice = models.Choices(**choice.model_dump(), question_id=db_question.id)
         db.add(db_choice)
     db.commit()
+    return {"message": "Question is created"}
+
+@app.put("/questions/{question_id}")
+async def update_question(question_id: int, question: QuestionBase, db: db_dependency):
+    db_question = db.query(models.Questions).filter(models.Questions.id == question_id).first()
+    if not db_question:
+        raise HTTPException(status_code=404, detail="Question is not found")
+    db_question.question_text = question.question_text # type: ignore
+    db.commit()
+    db.refresh(db_question)
+    db.query(models.Choices).filter(models.Choices.question_id == question_id).delete()
+    for choice in question.choices:
+        db_choice = models.Choices(**choice.model_dump(), question_id=db_question.id)
+        db.add(db_choice)
+    db.commit()
+    return {"message": "Question is updated"}
+
+@app.delete("/questions/{question_id}")
+async def delete_question(question_id: int, db: db_dependency):
+    if not db.query(models.Questions).filter(models.Questions.id == question_id).first():
+        raise HTTPException(status_code=404, detail="Question is not found")
+    db.query(models.Choices).filter(models.Choices.question_id == question_id).delete()
+    db.query(models.Questions).filter(models.Questions.id == question_id).delete()
+    db.commit()
+    return {"message": "Question is deleted"}
